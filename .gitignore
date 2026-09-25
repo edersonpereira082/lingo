@@ -1,0 +1,7 @@
+config/config.php
+uploads/alunos/*
+!uploads/alunos/.htaccess
+storage/audio/*.mp3
+*.log
+.DS_Store
+Thumbs.db

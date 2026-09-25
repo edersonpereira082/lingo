@@ -1,0 +1,238 @@
+-- HostGator / cPanel: importe este arquivo no banco JÁ criado.
+-- Não usa CREATE DATABASE (a conta compartilhada costuma bloquear).
+
+CREATE TABLE IF NOT EXISTS admins (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  usuario VARCHAR(60) NOT NULL UNIQUE,
+  senha VARCHAR(255) NOT NULL,
+  perfil VARCHAR(20) NOT NULL DEFAULT 'admin',
+  senha_pendente TINYINT(1) NOT NULL DEFAULT 0,
+  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cursos (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  nome VARCHAR(80) NOT NULL,
+  codigo VARCHAR(10) NOT NULL UNIQUE,
+  bandeira VARCHAR(8) NOT NULL,
+  descricao VARCHAR(255) NOT NULL,
+  cor VARCHAR(20) NOT NULL DEFAULT '#0e7c7b',
+  ordem INT UNSIGNED NOT NULL DEFAULT 0,
+  ativo TINYINT(1) NOT NULL DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS unidades (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  curso_id INT UNSIGNED NOT NULL,
+  titulo VARCHAR(120) NOT NULL,
+  descricao VARCHAR(255) DEFAULT NULL,
+  nivel VARCHAR(10) NOT NULL DEFAULT 'A1',
+  ordem INT UNSIGNED NOT NULL DEFAULT 0,
+  CONSTRAINT fk_unidades_curso FOREIGN KEY (curso_id) REFERENCES cursos(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS aulas (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  unidade_id INT UNSIGNED NOT NULL,
+  titulo VARCHAR(120) NOT NULL,
+  resumo VARCHAR(255) DEFAULT NULL,
+  teoria TEXT,
+  ordem INT UNSIGNED NOT NULL DEFAULT 0,
+  xp_recompensa INT UNSIGNED NOT NULL DEFAULT 10,
+  CONSTRAINT fk_aulas_unidade FOREIGN KEY (unidade_id) REFERENCES unidades(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS exercicios (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  aula_id INT UNSIGNED NOT NULL,
+  tipo ENUM('multipla','completar','traducao','verdadeiro_falso','emparelhar','ordem') NOT NULL,
+  enunciado TEXT NOT NULL,
+  dica VARCHAR(255) DEFAULT NULL,
+  resposta_correta TEXT,
+  alternativas TEXT,
+  ordem INT UNSIGNED NOT NULL DEFAULT 0,
+  CONSTRAINT fk_exercicios_aula FOREIGN KEY (aula_id) REFERENCES aulas(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS usuarios (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  nome VARCHAR(120) NOT NULL,
+  email VARCHAR(150) NOT NULL UNIQUE,
+  senha VARCHAR(255) NULL,
+  xp INT UNSIGNED NOT NULL DEFAULT 0,
+  ofensiva INT UNSIGNED NOT NULL DEFAULT 0,
+  recorde_ofensiva INT UNSIGNED NOT NULL DEFAULT 0,
+  ultimo_estudo DATE DEFAULT NULL,
+  meta_diaria INT UNSIGNED NOT NULL DEFAULT 20,
+  xp_hoje INT UNSIGNED NOT NULL DEFAULT 0,
+  data_xp DATE DEFAULT NULL,
+  curso_atual_id INT UNSIGNED DEFAULT NULL,
+  avatar VARCHAR(40) NOT NULL DEFAULT 'lino-classico',
+  foto VARCHAR(120) DEFAULT NULL,
+  foto_social VARCHAR(1000) DEFAULT NULL,
+  foto_modo VARCHAR(16) NOT NULL DEFAULT 'avatar',
+  google_id VARCHAR(80) DEFAULT NULL,
+  facebook_id VARCHAR(80) DEFAULT NULL,
+  ativo TINYINT(1) NOT NULL DEFAULT 1,
+  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_usuarios_google (google_id),
+  UNIQUE KEY uq_usuarios_facebook (facebook_id),
+  CONSTRAINT fk_usuarios_curso FOREIGN KEY (curso_atual_id) REFERENCES cursos(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS inscricoes (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  usuario_id INT UNSIGNED NOT NULL,
+  curso_id INT UNSIGNED NOT NULL,
+  xp INT UNSIGNED NOT NULL DEFAULT 0,
+  nivel_inicio VARCHAR(2) NOT NULL DEFAULT 'A1',
+  modo_trilha VARCHAR(12) NOT NULL DEFAULT 'completa',
+  inscrito_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_user_curso (usuario_id, curso_id),
+  CONSTRAINT fk_insc_user FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  CONSTRAINT fk_insc_curso FOREIGN KEY (curso_id) REFERENCES cursos(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS progresso_aulas (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  usuario_id INT UNSIGNED NOT NULL,
+  aula_id INT UNSIGNED NOT NULL,
+  percentual TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  acertos INT UNSIGNED NOT NULL DEFAULT 0,
+  erros INT UNSIGNED NOT NULL DEFAULT 0,
+  xp_ganho INT UNSIGNED NOT NULL DEFAULT 0,
+  tentativas INT UNSIGNED NOT NULL DEFAULT 0,
+  concluida TINYINT(1) NOT NULL DEFAULT 0,
+  concluida_em DATETIME DEFAULT NULL,
+  UNIQUE KEY uniq_user_aula (usuario_id, aula_id),
+  CONSTRAINT fk_prog_user FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  CONSTRAINT fk_prog_aula FOREIGN KEY (aula_id) REFERENCES aulas(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS palavras (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  curso_id INT UNSIGNED NOT NULL,
+  termo VARCHAR(120) NOT NULL,
+  traducao VARCHAR(120) NOT NULL,
+  exemplo VARCHAR(255) DEFAULT NULL,
+  nivel VARCHAR(10) DEFAULT 'A1',
+  CONSTRAINT fk_palavras_curso FOREIGN KEY (curso_id) REFERENCES cursos(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS configuracoes (
+  chave VARCHAR(60) PRIMARY KEY,
+  valor TEXT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS logs (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  criado_em DATETIME NOT NULL,
+  usuario VARCHAR(60) NOT NULL,
+  acao VARCHAR(80) NOT NULL,
+  detalhe VARCHAR(255) DEFAULT NULL,
+  ip VARCHAR(45) DEFAULT NULL,
+  INDEX idx_criado (criado_em)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS planos (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  codigo VARCHAR(40) NOT NULL UNIQUE,
+  nome VARCHAR(80) NOT NULL,
+  descricao VARCHAR(255) NOT NULL,
+  preco_centavos INT UNSIGNED NOT NULL,
+  ciclo ENUM('mensal','anual') NOT NULL,
+  dias INT UNSIGNED NOT NULL,
+  destaque TINYINT(1) NOT NULL DEFAULT 0,
+  ativo TINYINT(1) NOT NULL DEFAULT 1,
+          ordem INT UNSIGNED NOT NULL DEFAULT 0,
+          vidas INT UNSIGNED NOT NULL DEFAULT 5,
+          xp_percent INT UNSIGNED NOT NULL DEFAULT 100
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS assinaturas (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  usuario_id INT UNSIGNED NOT NULL,
+  plano_id INT UNSIGNED NOT NULL,
+  status ENUM('pendente','ativa','cancelada','expirada') NOT NULL DEFAULT 'pendente',
+  metodo VARCHAR(20) DEFAULT NULL,
+  inicia_em DATETIME DEFAULT NULL,
+  expira_em DATETIME DEFAULT NULL,
+  cancelada_em DATETIME DEFAULT NULL,
+  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_ass_user_status (usuario_id, status),
+  CONSTRAINT fk_ass_user FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  CONSTRAINT fk_ass_plano FOREIGN KEY (plano_id) REFERENCES planos(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pagamentos (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  assinatura_id INT UNSIGNED NOT NULL,
+  valor_centavos INT UNSIGNED NOT NULL,
+  metodo VARCHAR(20) NOT NULL,
+  status ENUM('pendente','pago','falhou') NOT NULL DEFAULT 'pendente',
+  referencia VARCHAR(80) DEFAULT NULL,
+  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_pag_ass FOREIGN KEY (assinatura_id) REFERENCES assinaturas(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS conversas_salas (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  codigo VARCHAR(40) NOT NULL UNIQUE,
+  nome VARCHAR(120) NOT NULL,
+  idioma VARCHAR(8) NOT NULL,
+  descricao VARCHAR(255) NOT NULL DEFAULT '',
+  topico VARCHAR(180) NOT NULL DEFAULT '',
+  frases TEXT NOT NULL,
+  ordem INT UNSIGNED NOT NULL DEFAULT 0,
+  ativo TINYINT(1) NOT NULL DEFAULT 1,
+  INDEX idx_conv_idioma (idioma, ativo, ordem)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS conversas_mensagens (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  sala_id INT UNSIGNED NOT NULL,
+  usuario_id INT UNSIGNED NOT NULL,
+  mensagem VARCHAR(400) NOT NULL,
+  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_conv_msg_sala (sala_id, id),
+  CONSTRAINT fk_conv_msg_sala FOREIGN KEY (sala_id) REFERENCES conversas_salas(id) ON DELETE CASCADE,
+  CONSTRAINT fk_conv_msg_user FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS conversas_presenca (
+  usuario_id INT UNSIGNED NOT NULL PRIMARY KEY,
+  sala_id INT UNSIGNED NOT NULL,
+  visto_em DATETIME NOT NULL,
+  INDEX idx_conv_presenca (sala_id, visto_em),
+  CONSTRAINT fk_conv_pre_user FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  CONSTRAINT fk_conv_pre_sala FOREIGN KEY (sala_id) REFERENCES conversas_salas(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS tutor_mensagens (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  usuario_id INT UNSIGNED NOT NULL,
+  curso_id INT UNSIGNED NOT NULL,
+  papel ENUM('aluno','lino') NOT NULL,
+  mensagem TEXT NOT NULL,
+  audio VARCHAR(255) NOT NULL DEFAULT '',
+  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_tutor_hist (usuario_id, curso_id, id),
+  CONSTRAINT fk_tutor_user FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  CONSTRAINT fk_tutor_curso FOREIGN KEY (curso_id) REFERENCES cursos(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS conversas_privadas (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  codigo VARCHAR(64) NOT NULL UNIQUE,
+  idioma VARCHAR(8) NOT NULL,
+  aluno_a INT UNSIGNED NOT NULL,
+  aluno_b INT UNSIGNED NOT NULL,
+  status ENUM('ativa','encerrada') NOT NULL DEFAULT 'ativa',
+  monitorada TINYINT(1) NOT NULL DEFAULT 1,
+  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_conv_par (aluno_a, aluno_b, idioma),
+  INDEX idx_conv_priv_status (status, atualizado_em),
+  CONSTRAINT fk_conv_priv_a FOREIGN KEY (aluno_a) REFERENCES usuarios(id) ON DELETE CASCADE,
+  CONSTRAINT fk_conv_priv_b FOREIGN KEY (aluno_b) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
